@@ -670,7 +670,6 @@
 
     // 切换监控状态
     watchToggle.addEventListener('click', async () => {
-      watchToggle.style.pointerEvents = 'none';
       try {
         const endpoint = watchEnabled ? '/api/watch/stop' : '/api/watch/start';
         const res = await fetch(endpoint, { method: 'POST' });
@@ -681,8 +680,8 @@
         updateWatchUI();
       } catch (e) {
         console.error('切换监控失败', e);
+        alert('切换监控失败: ' + e.message);
       }
-      watchToggle.style.pointerEvents = 'auto';
     });
 
     // 页面加载时获取状态
