@@ -183,9 +183,7 @@ if [ -n "$LOCAL_IP" ]; then
     echo ""
 fi
 
-# 询问是否立即启动
-read -p "是否立即启动服务器? [Y/n] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-    npm start
-fi
+# 自动启动服务器
+echo -e "${GREEN}[*] 启动服务器...${NC}"
+echo ""
+npm start
