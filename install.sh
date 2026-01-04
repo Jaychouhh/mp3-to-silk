@@ -48,7 +48,14 @@ install_nodejs() {
 
     case $SYSTEM in
         termux)
-            pkg update -y
+            # 检查并设置 Termux 镜像源
+            if ! pkg update -y 2>&1 | grep -q "Reading package"; then
+                echo -e "${YELLOW}[*] 配置 Termux 镜像源...${NC}"
+                # 使用清华镜像源
+                mkdir -p $PREFIX/etc/apt/sources.list.d
+                echo "deb https://mirrors.tuna.tsinghua.edu.cn/termux/apt/termux-main stable main" > $PREFIX/etc/apt/sources.list.d/tuna.list
+                pkg update -y
+            fi
             pkg install -y nodejs ffmpeg git
             ;;
         macos)
