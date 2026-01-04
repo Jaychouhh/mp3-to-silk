@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#667eea">
+  <title>MP3转SILK - 音频格式转换器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 30px;
+      width: 100%;
+      max-width: 450px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .upload-area {
+      border: 3px dashed #ddd;
+      border-radius: 15px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 20px;
+    }
+
+    .upload-area:hover,
+    .upload-area.dragover {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.05);
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .upload-text {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .upload-hint {
+      color: #999;
+      font-size: 12px;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .file-list {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      display: none;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .file-list.show {
+      display: block;
+    }
+
+    .file-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .file-count {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .clear-btn:hover {
+      color: #ff4444;
+    }
+
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .file-item:last-child {
+      border-bottom: none;
+    }
+
+    .file-item-name {
+      color: #333;
+      font-size: 14px;
+      word-break: break-all;
+      flex: 1;
+      margin-right: 10px;
+    }
+
+    .file-item-size {
+      color: #999;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .file-item-status {
+      margin-left: 10px;
+      font-size: 12px;
+    }
+
+    .file-item-status.pending { color: #999; }
+    .file-item-status.converting { color: #667eea; }
+    .file-item-status.done { color: #28a745; }
+    .file-item-status.error { color: #dc3545; }
+
+    .convert-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: none;
+    }
+
+    .convert-btn.show {
+      display: block;
+    }
+
+    .convert-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+
+    .convert-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .progress-container {
+      display: none;
+      margin-top: 20px;
+    }
+
+    .progress-container.show {
+      display: block;
+    }
+
+    .progress-bar {
+      background: #e9ecef;
+      border-radius: 10px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .message {
+      text-align: center;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .supported-formats {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .supported-formats h3 {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .format-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .format-tag {
+      background: #f0f0f0;
+      color: #666;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+
+      .upload-area {
+        padding: 30px 15px;
+      }
+
+      .upload-icon {
+        font-size: 36px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MP3 转 SILK</h1>
+    <p class="subtitle">微信语音格式转换器 (支持批量)</p>
+
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">&#127925;</div>
+      <p class="upload-text">点击或拖拽上传音频文件</p>
+      <p class="upload-hint">支持多选，可批量转换</p>
+    </div>
+
+    <input type="file" id="fileInput" accept=".mp3,.wav,.ogg,.m4a,.flac,.aac,audio/*" multiple>
+
+    <div class="file-list" id="fileList">
+      <div class="file-list-header">
+        <span class="file-count" id="fileCount">已选择 0 个文件</span>
+        <button class="clear-btn" id="clearBtn">清空</button>
+      </div>
+      <div id="fileItems"></div>
+    </div>
+
+    <button class="convert-btn" id="convertBtn">开始批量转换</button>
+
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <p class="progress-text" id="progressText">正在转换...</p>
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <div class="supported-formats">
+      <h3>支持的输入格式</h3>
+      <div class="format-tags">
+        <span class="format-tag">MP3</span>
+        <span class="format-tag">WAV</span>
+        <span class="format-tag">OGG</span>
+        <span class="format-tag">M4A</span>
+        <span class="format-tag">FLAC</span>
+        <span class="format-tag">AAC</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const fileCount = document.getElementById('fileCount');
+    const fileItems = document.getElementById('fileItems');
+    const clearBtn = document.getElementById('clearBtn');
+    const convertBtn = document.getElementById('convertBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const message = document.getElementById('message');
+
+    let selectedFiles = [];
+
+    // 点击上传区域
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    // 拖拽支持
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+
+    // 文件选择
+    fileInput.addEventListener('change', (e) => {
+      handleFiles(e.target.files);
+    });
+
+    // 清空按钮
+    clearBtn.addEventListener('click', () => {
+      selectedFiles = [];
+      updateFileList();
+      fileInput.value = '';
+    });
+
+    function handleFiles(files) {
+      for (const file of files) {
+        // 避免重复添加
+        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+          selectedFiles.push({
+            file,
+            status: 'pending'
+          });
+        }
+      }
+      updateFileList();
+      hideMessage();
+    }
+
+    function updateFileList() {
+      if (selectedFiles.length === 0) {
+        fileList.classList.remove('show');
+        convertBtn.classList.remove('show');
+        return;
+      }
+
+      fileList.classList.add('show');
+      convertBtn.classList.add('show');
+      fileCount.textContent = `已选择 ${selectedFiles.length} 个文件`;
+
+      fileItems.innerHTML = selectedFiles.map((item, index) => `
+        <div class="file-item" data-index="${index}">
+          <span class="file-item-name">${item.file.name}</span>
+          <span class="file-item-size">${formatFileSize(item.file.size)}</span>
+          <span class="file-item-status ${item.status}">${getStatusText(item.status)}</span>
+        </div>
+      `).join('');
+    }
+
+    function getStatusText(status) {
+      const texts = {
+        pending: '等待',
+        converting: '转换中',
+        done: '完成',
+        error: '失败'
+      };
+      return texts[status] || '';
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // 转换单个文件
+    async function convertFile(item) {
+      const formData = new FormData();
+      formData.append('audio', item.file);
+
+      const response = await fetch('/api/convert', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || '转换失败');
+      }
+
+      const blob = await response.blob();
+      return blob;
+    }
+
+    // 下载文件
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // 批量转换
+    convertBtn.addEventListener('click', async () => {
+      if (selectedFiles.length === 0) return;
+
+      convertBtn.disabled = true;
+      progressContainer.classList.add('show');
+      hideMessage();
+
+      let completed = 0;
+      let failed = 0;
+
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const item = selectedFiles[i];
+        item.status = 'converting';
+        updateFileList();
+
+        progressFill.style.width = `${(i / selectedFiles.length) * 100}%`;
+        progressText.textContent = `正在转换 ${i + 1}/${selectedFiles.length}: ${item.file.name}`;
+
+        try {
+          const blob = await convertFile(item);
+          const newName = item.file.name.replace(/\.[^.]+$/, '.silk');
+          downloadBlob(blob, newName);
+          item.status = 'done';
+          completed++;
+        } catch (error) {
+          console.error(`转换失败: ${item.file.name}`, error);
+          item.status = 'error';
+          failed++;
+        }
+
+        updateFileList();
+
+        // 添加小延迟避免浏览器卡顿
+        await new Promise(r => setTimeout(r, 100));
+      }
+
+      progressFill.style.width = '100%';
+      progressText.textContent = '全部完成!';
+
+      if (failed === 0) {
+        showMessage(`成功转换 ${completed} 个文件!`, 'success');
+      } else {
+        showMessage(`完成 ${completed} 个，失败 ${failed} 个`, failed === selectedFiles.length ? 'error' : 'success');
+      }
+
+      convertBtn.disabled = false;
+    });
+
+    function showMessage(text, type) {
+      message.textContent = text;
+      message.className = 'message show ' + type;
+    }
+
+    function hideMessage() {
+      message.classList.remove('show');
+    }
+  </script>
+</body>
+</html>
