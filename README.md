@@ -10,7 +10,7 @@
 
 ## 一键安装
 
-**Linux / macOS / Termux (Android):**
+**Linux / macOS:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/jaychouhh/mp3-to-silk/main/install.sh | bash
@@ -22,11 +22,13 @@ curl -fsSL https://raw.githubusercontent.com/jaychouhh/mp3-to-silk/main/install.
 wget -qO- https://raw.githubusercontent.com/jaychouhh/mp3-to-silk/main/install.sh | bash
 ```
 
-**Termux 用户如果没有 curl:**
+**Termux (Android) 一键安装:**
 
 ```bash
-pkg install curl && curl -fsSL https://raw.githubusercontent.com/jaychouhh/mp3-to-silk/main/install.sh | bash
+termux-change-repo && pkg install curl -y && curl -fsSL https://raw.githubusercontent.com/jaychouhh/mp3-to-silk/main/install.sh | bash
 ```
+
+> 首次运行会弹出镜像选择界面，选择 "Mirror group" 然后选择 "Asia" 或任意可用镜像即可。
 
 脚本会自动：
 - 检测系统类型
