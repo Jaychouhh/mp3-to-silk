@@ -156,11 +156,13 @@ fi
 
 # 安装 npm 依赖
 if [ "$SYSTEM" = "termux" ]; then
-    echo -e "${GREEN}[*] 安装依赖...${NC}"
+    echo -e "${GREEN}[*] 安装依赖 (Termux 使用系统 FFmpeg)...${NC}"
+    # 跳过 ffmpeg-static 的安装脚本，因为它在 Android 上不可用
+    npm install --ignore-scripts
 else
     echo -e "${GREEN}[*] 安装依赖 (包含 FFmpeg)...${NC}"
+    npm install
 fi
-npm install
 
 echo ""
 echo -e "${GREEN}==========================================${NC}"
