@@ -16,26 +16,19 @@
 curl -fsSL https://raw.githubusercontent.com/jaychouhh/mp3-to-silk/main/install.sh | bash
 ```
 
-或者使用 wget:
-
-```bash
-wget -qO- https://raw.githubusercontent.com/jaychouhh/mp3-to-silk/main/install.sh | bash
-```
-
 **Termux (Android) 一键安装:**
 
 ```bash
-termux-change-repo && pkg install nodejs ffmpeg git -y && termux-setup-storage && git clone https://github.com/jaychouhh/mp3-to-silk.git ~/mp3-to-silk && cd ~/mp3-to-silk && npm install --ignore-scripts && npm start
+pkg update -y && pkg upgrade -y && pkg install nodejs ffmpeg git -y && termux-setup-storage; git clone https://github.com/jaychouhh/mp3-to-silk.git ~/mp3-to-silk && cd ~/mp3-to-silk && npm install --ignore-scripts && npm start
 ```
 
-> 首次运行 `termux-change-repo` 会弹出镜像选择界面，选择 "Mirror group" 然后选择 "mirrors.tuna.tsinghua.edu.cn" 或其他可用镜像。
-> `termux-setup-storage` 会请求存储权限，用于文件夹监控功能。
+> `termux-setup-storage` 会弹出存储权限请求，授权后可使用文件夹监控功能。
 
 脚本会自动：
-- 检测系统类型
-- 安装 Node.js（如果未安装）
+- 更新 Termux 包
+- 安装 Node.js、FFmpeg、Git
 - 下载项目并安装依赖
-- Termux 会额外安装 FFmpeg 并请求存储权限
+- 启动服务器
 
 ## 手动安装
 
