@@ -132,6 +132,13 @@ if [ "$SYSTEM" = "termux" ]; then
     else
         echo -e "${GREEN}[*] FFmpeg 已安装${NC}"
     fi
+
+    # 请求存储权限（用于文件夹监控功能）
+    if [ ! -d ~/storage ]; then
+        echo -e "${YELLOW}[*] 请求存储权限 (用于文件夹监控)...${NC}"
+        termux-setup-storage
+        sleep 2
+    fi
 fi
 
 # 设置安装目录

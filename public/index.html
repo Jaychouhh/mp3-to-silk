@@ -266,6 +266,105 @@
       font-size: 12px;
     }
 
+    /* 文件夹监控样式 */
+    .watch-section {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .watch-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .watch-title {
+      font-size: 14px;
+      color: #666;
+      font-weight: 600;
+    }
+
+    .watch-toggle {
+      position: relative;
+      width: 50px;
+      height: 26px;
+      background: #ccc;
+      border-radius: 13px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .watch-toggle.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .watch-toggle::after {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.3s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .watch-toggle.active::after {
+      transform: translateX(24px);
+    }
+
+    .watch-info {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 12px;
+      color: #666;
+      display: none;
+    }
+
+    .watch-info.show {
+      display: block;
+    }
+
+    .watch-dir {
+      margin-bottom: 6px;
+      word-break: break-all;
+    }
+
+    .watch-dir strong {
+      color: #333;
+    }
+
+    .watch-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #eee;
+    }
+
+    .watch-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ccc;
+    }
+
+    .watch-status-dot.active {
+      background: #28a745;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
     @media (max-width: 480px) {
       .container {
         padding: 20px;
@@ -326,6 +425,21 @@
         <span class="format-tag">M4A</span>
         <span class="format-tag">FLAC</span>
         <span class="format-tag">AAC</span>
+      </div>
+    </div>
+
+    <div class="watch-section">
+      <div class="watch-header">
+        <span class="watch-title">文件夹自动监控</span>
+        <div class="watch-toggle" id="watchToggle"></div>
+      </div>
+      <div class="watch-info" id="watchInfo">
+        <div class="watch-dir"><strong>输入目录:</strong> <span id="watchInputDir"></span></div>
+        <div class="watch-dir"><strong>输出目录:</strong> <span id="watchOutputDir"></span></div>
+        <div class="watch-status">
+          <div class="watch-status-dot" id="watchStatusDot"></div>
+          <span id="watchStatusText">已停止</span>
+        </div>
       </div>
     </div>
   </div>
@@ -514,6 +628,65 @@
     function hideMessage() {
       message.classList.remove('show');
     }
+
+    // 文件夹监控功能
+    const watchToggle = document.getElementById('watchToggle');
+    const watchInfo = document.getElementById('watchInfo');
+    const watchInputDir = document.getElementById('watchInputDir');
+    const watchOutputDir = document.getElementById('watchOutputDir');
+    const watchStatusDot = document.getElementById('watchStatusDot');
+    const watchStatusText = document.getElementById('watchStatusText');
+
+    let watchEnabled = false;
+
+    // 获取监控状态
+    async function getWatchStatus() {
+      try {
+        const res = await fetch('/api/watch/status');
+        const data = await res.json();
+        watchEnabled = data.enabled;
+        watchInputDir.textContent = data.inputDir;
+        watchOutputDir.textContent = data.outputDir;
+        updateWatchUI();
+      } catch (e) {
+        console.error('获取监控状态失败', e);
+      }
+    }
+
+    // 更新监控UI
+    function updateWatchUI() {
+      if (watchEnabled) {
+        watchToggle.classList.add('active');
+        watchInfo.classList.add('show');
+        watchStatusDot.classList.add('active');
+        watchStatusText.textContent = '监控中...';
+      } else {
+        watchToggle.classList.remove('active');
+        watchInfo.classList.add('show');
+        watchStatusDot.classList.remove('active');
+        watchStatusText.textContent = '已停止';
+      }
+    }
+
+    // 切换监控状态
+    watchToggle.addEventListener('click', async () => {
+      watchToggle.style.pointerEvents = 'none';
+      try {
+        const endpoint = watchEnabled ? '/api/watch/stop' : '/api/watch/start';
+        const res = await fetch(endpoint, { method: 'POST' });
+        const data = await res.json();
+        watchEnabled = data.enabled;
+        if (data.inputDir) watchInputDir.textContent = data.inputDir;
+        if (data.outputDir) watchOutputDir.textContent = data.outputDir;
+        updateWatchUI();
+      } catch (e) {
+        console.error('切换监控失败', e);
+      }
+      watchToggle.style.pointerEvents = 'auto';
+    });
+
+    // 页面加载时获取状态
+    getWatchStatus();
   </script>
 </body>
 </html>

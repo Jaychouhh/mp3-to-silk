@@ -11,7 +11,6 @@ const isTermux = fs.existsSync('/data/data/com.termux');
 
 // 设置 ffmpeg 路径
 if (isTermux) {
-  // Termux 使用系统安装的 ffmpeg
   const termuxFfmpeg = '/data/data/com.termux/files/usr/bin/ffmpeg';
   if (fs.existsSync(termuxFfmpeg)) {
     ffmpeg.setFfmpegPath(termuxFfmpeg);
@@ -21,13 +20,11 @@ if (isTermux) {
     process.exit(1);
   }
 } else {
-  // 其他平台使用 ffmpeg-static
   try {
     const ffmpegStatic = require('ffmpeg-static');
     ffmpeg.setFfmpegPath(ffmpegStatic);
     console.log('[*] 使用内置 ffmpeg');
   } catch (e) {
-    // 尝试使用系统 ffmpeg
     try {
       execSync('ffmpeg -version', { stdio: 'ignore' });
       console.log('[*] 使用系统 ffmpeg');
@@ -39,7 +36,14 @@ if (isTermux) {
 }
 
 const app = express();
+app.use(express.json());
 const PORT = process.env.PORT || 9527;
+
+// 文件夹监控相关
+const WATCH_INPUT = isTermux ? '/sdcard/ToSilk' : path.join(__dirname, 'ToSilk');
+const WATCH_OUTPUT = isTermux ? '/sdcard/SilkOutput' : path.join(__dirname, 'SilkOutput');
+let watchInterval = null;
+let processedFiles = new Set();
 
 // 配置文件上传
 const storage = multer.diskStorage({
@@ -89,6 +93,93 @@ function convertToPCM(inputPath, outputPath, sampleRate = 24000) {
   });
 }
 
+/**
+ * 转换单个文件
+ */
+async function convertFile(inputPath, outputPath) {
+  const pcmPath = inputPath + '.pcm';
+
+  try {
+    await convertToPCM(inputPath, pcmPath, 24000);
+    const pcmBuffer = fs.readFileSync(pcmPath);
+    const result = await encode(pcmBuffer, 24000);
+    fs.writeFileSync(outputPath, Buffer.from(result.data));
+    fs.unlinkSync(pcmPath);
+    return true;
+  } catch (error) {
+    if (fs.existsSync(pcmPath)) fs.unlinkSync(pcmPath);
+    throw error;
+  }
+}
+
+/**
+ * 检查并处理监控文件夹中的文件
+ */
+async function checkWatchFolder() {
+  if (!fs.existsSync(WATCH_INPUT)) return;
+
+  const allowedTypes = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac'];
+  const files = fs.readdirSync(WATCH_INPUT);
+
+  for (const file of files) {
+    const ext = path.extname(file).toLowerCase();
+    if (!allowedTypes.includes(ext)) continue;
+
+    const inputPath = path.join(WATCH_INPUT, file);
+    const fileKey = `${file}-${fs.statSync(inputPath).mtime.getTime()}`;
+
+    if (processedFiles.has(fileKey)) continue;
+
+    const outputName = path.basename(file, ext) + '.silk';
+    const outputPath = path.join(WATCH_OUTPUT, outputName);
+
+    console.log(`[监控] 发现新文件: ${file}`);
+    processedFiles.add(fileKey);
+
+    try {
+      await convertFile(inputPath, outputPath);
+      console.log(`[监控] 转换成功: ${file} -> ${outputName}`);
+      // 删除原文件
+      fs.unlinkSync(inputPath);
+    } catch (error) {
+      console.error(`[监控] 转换失败: ${file}`, error.message);
+      processedFiles.delete(fileKey);
+    }
+  }
+}
+
+/**
+ * 启动文件夹监控
+ */
+function startWatch() {
+  if (watchInterval) return false;
+
+  // 创建目录
+  if (!fs.existsSync(WATCH_INPUT)) {
+    fs.mkdirSync(WATCH_INPUT, { recursive: true });
+  }
+  if (!fs.existsSync(WATCH_OUTPUT)) {
+    fs.mkdirSync(WATCH_OUTPUT, { recursive: true });
+  }
+
+  processedFiles.clear();
+  watchInterval = setInterval(checkWatchFolder, 2000);
+  console.log(`[监控] 已启动，监控目录: ${WATCH_INPUT}`);
+  console.log(`[监控] 输出目录: ${WATCH_OUTPUT}`);
+  return true;
+}
+
+/**
+ * 停止文件夹监控
+ */
+function stopWatch() {
+  if (!watchInterval) return false;
+  clearInterval(watchInterval);
+  watchInterval = null;
+  console.log('[监控] 已停止');
+  return true;
+}
+
 // 转换API
 app.post('/api/convert', upload.single('audio'), async (req, res) => {
   if (!req.file) {
@@ -106,19 +197,11 @@ app.post('/api/convert', upload.single('audio'), async (req, res) => {
   };
 
   try {
-    // 1. 转换为 PCM
     await convertToPCM(inputPath, pcmPath, 24000);
-
-    // 2. 读取 PCM 数据
     const pcmBuffer = fs.readFileSync(pcmPath);
-
-    // 3. 编码为 SILK
     const result = await encode(pcmBuffer, 24000);
-
-    // 4. 写入文件
     fs.writeFileSync(outputPath, Buffer.from(result.data));
 
-    // 5. 下载
     const originalName = path.basename(req.file.originalname, path.extname(req.file.originalname));
     res.download(outputPath, `${originalName}.silk`, (err) => {
       cleanup();
@@ -133,12 +216,46 @@ app.post('/api/convert', upload.single('audio'), async (req, res) => {
   }
 });
 
+// 监控状态API
+app.get('/api/watch/status', (req, res) => {
+  res.json({
+    enabled: watchInterval !== null,
+    inputDir: WATCH_INPUT,
+    outputDir: WATCH_OUTPUT,
+    isTermux
+  });
+});
+
+// 启动监控API
+app.post('/api/watch/start', (req, res) => {
+  const success = startWatch();
+  res.json({
+    success,
+    enabled: watchInterval !== null,
+    inputDir: WATCH_INPUT,
+    outputDir: WATCH_OUTPUT
+  });
+});
+
+// 停止监控API
+app.post('/api/watch/stop', (req, res) => {
+  const success = stopWatch();
+  res.json({
+    success,
+    enabled: watchInterval !== null
+  });
+});
+
 // 健康检查
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', port: PORT });
+  res.json({ status: 'ok', port: PORT, isTermux });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
   console.log(`局域网访问: http://0.0.0.0:${PORT}`);
+  if (isTermux) {
+    console.log(`[提示] 可在网页中开启文件夹监控功能`);
+    console.log(`[提示] 监控目录: ${WATCH_INPUT}`);
+  }
 });
